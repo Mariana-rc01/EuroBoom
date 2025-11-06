@@ -23,7 +23,7 @@ data_categories <- data %>% filter(!Category %in% c("Total"))
 
 ### Translate Categories
 all_categories <- unique(data_categories$Category)
-translation_dict <- c(
+categories_dict <- c(
   "Acessórios para o lar, equipamento doméstico e manutenção corrente da habitação" = "Household Equipment, Domestic Goods & Home Maintenance",
   "Bebidas alcoólicas e tabaco" = "Alcoholic Beverages & Tobacco",
   "Bens e serviços diversos" = "Miscellaneous Goods & Services",
@@ -37,7 +37,7 @@ translation_dict <- c(
   "Transportes" = "Transport",
   "Vestuário e calçado" = "Clothing & Footwear"
 )
-data_categories <- data_categories %>% mutate(Category = recode(Category, !!!translation_dict))
+data_categories <- data_categories %>% mutate(Category = recode(Category, !!!categories_dict))
 
 all_categories <- unique(data_categories$Category)
 
@@ -69,35 +69,76 @@ data_plot_categories <- data_plot_categories %>% mutate(
                           RegionSign = paste(Region, Sign, sep = "_")
                         ) %>% select(-Sign)
 
-## Data Visualization
-### Shiny App
+# Second visualization
+
+## Data preparation
+data_map <- data %>% filter(Category == "Total") %>%
+            select(Year, Country, Inflation = Value)
+
+### Load map
+europe <- ne_countries(scale = "medium", continent = "Europe", returnclass = "sf")
+
+### Translate Countries
+all_countries <- unique(data_map$Country)
+countries_dict <- c(
+    "Alemanha"       = "Germany",
+    "Áustria"        = "Austria",
+    "Bélgica"        = "Belgium",
+    "Chéquia"        = "Czech Republic",
+    "Dinamarca"      = "Denmark",
+    "Eslováquia"     = "Slovakia",
+    "Eslovénia"      = "Slovenia",
+    "Espanha"          = "Spain",
+    "Estónia"        = "Estonia",
+    "Finlândia"      = "Finland",
+    "França"         = "France",
+    "Grécia"         = "Greece",
+    "Hungria"        = "Hungary",
+    "Irlanda"        = "Ireland",
+    "Itália"         = "Italy",
+    "Lituânia"       = "Lithuania",
+    "Luxemburgo"     = "Luxembourg",
+    "Portugal"       = "Portugal",
+    "Roménia"        = "Romania",
+    "Suécia"         = "Sweden",
+    "Chipre"         = "Cyprus",
+    "Letónia"        = "Latvia",
+    "Malta"          = "Malta",
+    "Países Baixos"  = "Netherlands",
+    "Polónia"        = "Poland",
+    "Bulgária"       = "Bulgaria",
+    "Croácia"        = "Croatia"
+)
+data_map <- data_map %>% mutate(Country = recode(Country, !!!countries_dict))
+
+# Data Visualization
+## Shiny App
 ui <- fluidPage(
-  titlePanel("Inflation by Category: Portugal vs European Average"),
+  titlePanel("Inflation Dashboard: Portugal vs Europe"),
   fluidRow(
-    column(
-      width = 12,
-      plotOutput("inflationPlot", height = "700px"),
-      br(),
-      sliderInput(
-        "year", "Year:",
-        min = min(data_plot_categories$Year),
-        max = max(data_plot_categories$Year),
-        value = min(data_plot_categories$Year),
-        step = 1,
-        sep = "",
-        animate = animationOptions(interval = 700, loop = TRUE)
-      )
-    )
+    column(width = 6,
+           plotOutput("categoryPlot", height = "700px")),
+    column(width = 6,
+           plotOutput("mapPlot", height = "700px"))
+  ),
+  br(),
+  sliderInput(
+    "year", "Year:",
+    min = min(data_plot_categories$Year),
+    max = max(data_plot_categories$Year),
+    value = min(data_plot_categories$Year),
+    step = 1,
+    sep = "",
+    animate = animationOptions(interval = 700, loop = TRUE)
   )
 )
 
 server <- function(input, output) {
 
-  output$inflationPlot <- renderPlot({
+  output$categoryPlot <- renderPlot({
 
     # Filter by year
-    df_year <- data_plot_categories %>%
-      filter(Year == input$year)
+    df_year <- data_plot_categories %>% filter(Year == input$year)
 
     p <- ggplot(df_year, aes(x = Category, y = Inflation, fill = RegionSign))
 
@@ -107,10 +148,10 @@ server <- function(input, output) {
     # Percentage
     p <- p + geom_text(
       aes(label = paste0(round(Inflation, 1), "%")),
-      position = position_dodge(width = 0.9),
-      hjust = ifelse(df_year$Inflation >= 0, -0.1, 1.1),
-      size = 3.2,
-      color = "black"
+          position = position_dodge(width = 0.9),
+          hjust = ifelse(df_year$Inflation >= 0, -0.1, 1.1),
+          size = 3.2,
+          color = "black"
     )
 
     # Colors
@@ -130,12 +171,8 @@ server <- function(input, output) {
       )
     )
 
-    p <- p + labs(
-      title    = "Inflation by Category: Portugal vs European Average",
-      subtitle = paste("Year:", input$year),
-      x        = NULL,
-      y        = "Inflation (%)"
-    )
+    p <- p + labs(title = "Inflation by Category: Portugal vs European Average", subtitle = paste("Year:", input$year),
+                  x = NULL, y = "Inflation (%)")
 
     p <- p + theme_minimal(base_size = 14) +
     theme(
@@ -150,7 +187,47 @@ server <- function(input, output) {
 
     print(p)
   })
+
+  output$mapPlot <- renderPlot({
+    df_map <- data_map %>% filter(Year == input$year)
+    europe_map <- europe %>% left_join(df_map, by = c("name" = "Country"))
+
+    # Countries with highest and lowest inflation
+    max_country <- df_map %>% filter(Inflation == max(Inflation, na.rm = TRUE)) %>% pull(Country)
+    min_country <- df_map %>% filter(Inflation == min(Inflation, na.rm = TRUE)) %>% pull(Country)
+
+    p <- ggplot(europe_map)
+
+    p <- p + geom_sf(aes(fill = Inflation), color = "black", size = 0.3)
+
+    # Highlights Portugal, country with the highest inflation and lowest
+    p <- p + geom_sf(data = subset(europe_map, name == "Portugal"), fill = NA, color = "black", size = 1) +
+        geom_sf(data = subset(europe_map, name %in% min_country), fill = NA, color = "green", size = 1) +
+        geom_sf(data = subset(europe_map, name %in% max_country), fill = NA, color = "red", size = 1)
+
+    # Percentage
+    p <- p + geom_sf_text(
+      aes(label = ifelse(!is.na(Inflation), paste0(round(Inflation,1), "%"), "")),
+      size = 3.5,
+      color = "black",
+      fontface = "bold"
+    )
+
+    p <- p + scale_fill_gradient2(low = "#1a9850", mid = "white", high = "#d73027", midpoint = 0, name = "Inflation (%)") +
+         coord_sf(xlim = c(-25, 45), ylim = c(34, 72), expand = FALSE)
+
+    p <- p + labs(title = "Average Inflation by Country in Europe", subtitle = paste("Year:", input$year))
+
+    p <- p + theme_void() +
+      theme(
+        plot.title = element_text(face = "bold", size = 16),
+        legend.position = "bottom",
+        legend.title = element_text(face = "bold")
+      )
+
+    print(p)
+  })
 }
 
-### Runs the app
+## Runs the app
 shinyApp(ui, server)
