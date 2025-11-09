@@ -1,126 +1,165 @@
+setwd("C:/Users/iaras/MECD/VisualizacaoDados/projeto")
+
 library(ggplot2)
 library(shiny)
 library(tidyverse)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
 
-# CSV
+# ============================
+#            DATA
+# ============================
+
 data <- read_csv("Inflation.csv", skip = 1,
-                     col_names = c("Year", "Country", "Category", "Filter2", "Filter3", "Scale", "Symbol", "Value"))
+                 col_names = c("Year", "Country", "Category",
+                               "Filter2", "Filter3", "Scale", "Symbol", "Value"))
 
-# Prepare and clean data in general
 data <- data %>%
-        transmute(
-          Year = as.numeric(str_trim(Year)),
-          Country = str_trim(Country),
-          Category = str_trim(Category),
-          Value = as.numeric(Value)
-        )
+  transmute(
+    Year = as.numeric(str_trim(Year)),
+    Country = str_trim(Country),
+    Category = str_trim(Category),
+    Value = as.numeric(Value)
+  )
 
-# First visualization
+# ============================
+#    CATEGORIES (Gráfico 1)
+# ============================
 
-## Data preparation
-### Remove Total (only interested in categories)
 data_categories <- data %>% filter(!Category %in% c("Total"))
 
-### Translate Categories
-all_categories <- unique(data_categories$Category)
 categories_dict <- c(
-  "Acessórios para o lar, equipamento doméstico e manutenção corrente da habitação" = "Household Equipment, Domestic Goods & Home Maintenance",
+  "Acessórios para o lar, equipamento doméstico e manutenção corrente da habitação" =
+    "Household Equipment, Domestic Goods & Home Maintenance",
   "Bebidas alcoólicas e tabaco" = "Alcoholic Beverages & Tobacco",
-  "Bens e serviços diversos" = "Miscellaneous Goods & Services",
-  "Comunicações" = "Communications",
-  "Educação" = "Education",
-  "Habitação, água, electricidade, gás e outros combustíveis" = "Housing, Water, Electricity, Gas & Other Fuels",
-  "Lazer, recreação e cultura" = "Recreation & Culture",
-  "Produtos alimentares e bebidas não alcoólicas" = "Food & Non-Alcoholic Beverages",
-  "Restaurantes e hotéis" = "Restaurants & Hotels",
-  "Saúde" = "Health",
-  "Transportes" = "Transport",
-  "Vestuário e calçado" = "Clothing & Footwear"
+  "Bens e serviços diversos"    = "Miscellaneous Goods & Services",
+  "Comunicações"                = "Communications",
+  "Educação"                    = "Education",
+  "Habitação, água, electricidade, gás e outros combustíveis" =
+    "Housing, Water, Electricity, Gas & Other Fuels",
+  "Lazer, recreação e cultura"  = "Recreation & Culture",
+  "Produtos alimentares e bebidas não alcoólicas" =
+    "Food & Non-Alcoholic Beverages",
+  "Restaurantes e hotéis"       = "Restaurants & Hotels",
+  "Saúde"                       = "Health",
+  "Transportes"                 = "Transport",
+  "Vestuário e calçado"         = "Clothing & Footwear"
 )
-data_categories <- data_categories %>% mutate(Category = recode(Category, !!!categories_dict))
+
+data_categories <- data_categories %>%
+  mutate(Category = recode(Category, !!!categories_dict))
 
 all_categories <- unique(data_categories$Category)
 
-### Calculate the European average by category and year
-europe_avg <- data_categories %>% group_by(Year, Category) %>%
-              summarise(Europe_Avg = mean(Value, na.rm = TRUE), .groups = "drop")
+# Média Europeia
+europe_avg <- data_categories %>%
+  group_by(Year, Category) %>%
+  summarise(Europe_Avg = mean(Value, na.rm = TRUE), .groups = "drop")
 
-### Join both data (only Portugal on the first one)
-data_plot_categories <- data_categories %>% filter(Country == "Portugal") %>%
-                        left_join(europe_avg, by = c("Year", "Category")) %>%
-                        rename(Portugal = Value) %>%
-                        select(Year, Category, Portugal, Europe_Avg) %>%
-                        mutate(
-                          Year = as.integer(Year),
-                          Category = factor(Category, levels = all_categories),
-                          Portugal = as.numeric(Portugal),
-                          Europe_Avg = as.numeric(Europe_Avg)
-                        )
+data_plot_categories <- data_categories %>%
+  filter(Country == "Portugal") %>%
+  left_join(europe_avg, by = c("Year", "Category")) %>%
+  rename(Portugal = Value) %>%
+  select(Year, Category, Portugal, Europe_Avg) %>%
+  mutate(
+    Year       = as.integer(Year),
+    Category   = factor(Category, levels = all_categories),
+    Portugal   = as.numeric(Portugal),
+    Europe_Avg = as.numeric(Europe_Avg)
+  )
 
-### Convert the columns Portugal and Europe_Avg in Region and the values of the inflation comes in new column called Inflation
 data_plot_categories <- data_plot_categories %>%
-                        pivot_longer(cols = c("Portugal", "Europe_Avg"),
-                                     names_to = "Region",
-                                     values_to = "Inflation")
-### Create new column for the colors
-data_plot_categories <- data_plot_categories %>% mutate(
-                          Region = factor(Region, levels = c("Portugal", "Europe_Avg")),
-                          Sign = ifelse(Inflation >= 0, "Positive", "Negative"),
-                          RegionSign = paste(Region, Sign, sep = "_")
-                        ) %>% select(-Sign)
+  pivot_longer(
+    cols = c("Portugal", "Europe_Avg"),
+    names_to = "Region",
+    values_to = "Inflation"
+  ) %>%
+  mutate(
+    Region    = factor(Region, levels = c("Portugal", "Europe_Avg")),
+    Sign      = ifelse(Inflation >= 0, "Positive", "Negative"),
+    RegionSign = paste(Region, Sign, sep = "_")
+  ) %>%
+  select(-Sign)
 
-# Second visualization
+# ============================
+#          MAPA (Gráfico 2)
+# ============================
 
-## Data preparation
-data_map <- data %>% filter(Category == "Total") %>%
-            select(Year, Country, Inflation = Value)
+data_map <- data %>%
+  filter(Category == "Total") %>%
+  select(Year, Country, Inflation = Value)
 
-### Load map
 europe <- ne_countries(scale = "medium", continent = "Europe", returnclass = "sf")
 
-### Translate Countries
-all_countries <- unique(data_map$Country)
 countries_dict <- c(
-    "Alemanha"       = "Germany",
-    "Áustria"        = "Austria",
-    "Bélgica"        = "Belgium",
-    "Chéquia"        = "Czech Republic",
-    "Dinamarca"      = "Denmark",
-    "Eslováquia"     = "Slovakia",
-    "Eslovénia"      = "Slovenia",
-    "Espanha"          = "Spain",
-    "Estónia"        = "Estonia",
-    "Finlândia"      = "Finland",
-    "França"         = "France",
-    "Grécia"         = "Greece",
-    "Hungria"        = "Hungary",
-    "Irlanda"        = "Ireland",
-    "Itália"         = "Italy",
-    "Lituânia"       = "Lithuania",
-    "Luxemburgo"     = "Luxembourg",
-    "Portugal"       = "Portugal",
-    "Roménia"        = "Romania",
-    "Suécia"         = "Sweden",
-    "Chipre"         = "Cyprus",
-    "Letónia"        = "Latvia",
-    "Malta"          = "Malta",
-    "Países Baixos"  = "Netherlands",
-    "Polónia"        = "Poland",
-    "Bulgária"       = "Bulgaria",
-    "Croácia"        = "Croatia"
+  "Alemanha"       = "Germany",
+  "Áustria"        = "Austria",
+  "Bélgica"        = "Belgium",
+  "Chéquia"        = "Czech Republic",
+  "Dinamarca"      = "Denmark",
+  "Eslováquia"     = "Slovakia",
+  "Eslovénia"      = "Slovenia",
+  "Espanha"        = "Spain",
+  "Estónia"        = "Estonia",
+  "Finlândia"      = "Finland",
+  "França"         = "France",
+  "Grécia"         = "Greece",
+  "Hungria"        = "Hungary",
+  "Irlanda"        = "Ireland",
+  "Itália"         = "Italy",
+  "Lituânia"       = "Lithuania",
+  "Luxemburgo"     = "Luxembourg",
+  "Portugal"       = "Portugal",
+  "Roménia"        = "Romania",
+  "Suécia"         = "Sweden",
+  "Chipre"         = "Cyprus",
+  "Letónia"        = "Latvia",
+  "Malta"          = "Malta",
+  "Países Baixos"  = "Netherlands",
+  "Polónia"        = "Poland",
+  "Bulgária"       = "Bulgaria",
+  "Croácia"        = "Croatia"
 )
-data_map <- data_map %>% mutate(Country = recode(Country, !!!countries_dict))
 
-# Data Visualization
-## Shiny App
+data_map <- data_map %>%
+  mutate(Country = recode(Country, !!!countries_dict))
+
+# ============================
+#            UI
+# ============================
+
 ui <- fluidPage(
-  titlePanel("Inflation Dashboard: Portugal vs Europe"),
-  fluidRow(
-    column(width = 6,
-           plotOutput("categoryPlot", height = "700px")),
-    column(width = 6,
-           plotOutput("mapPlot", height = "700px"))
+  tags$style(HTML("
+    html, body { background-color: #0C2947 !important; margin: 0 !important; padding: 0 !important; overflow-x: hidden; }
+    .container-fluid { background-color: #0C2947 !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+    .row, .col-sm-6, .shiny-plot-output { background-color: #0C2947 !important; margin: 0 !important; padding: 0 !important; }
+  ")),
+  
+  titlePanel(
+    tags$div("Inflation Dashboard: Portugal vs Europe", style = "color:white;")
   ),
+  
+  fluidRow(
+    style = "padding:0; margin:0;",
+    
+    # Gráfico 1
+    column(
+      width = 6, style = "padding:0; margin:0;",
+      h3("Inflation by Category", style = "color:white; margin-left:15px;"),
+      h5(textOutput("subtitleCategory"), style = "color:white; margin-left:15px; margin-top:-5px;"),
+      plotOutput("categoryPlot", height = "600px", width = "100%")
+    ),
+    
+    # Gráfico 2
+    column(
+      width = 6, style = "padding:0; margin:0;",
+      h3("Average Inflation by Country", style = "color:white; margin-left:15px;"),
+      h5(textOutput("subtitleMap"), style = "color:white; margin-left:15px; margin-top:-5px;"),
+      plotOutput("mapPlot", height = "700px", width = "100%")
+    )
+  ),
+  
   br(),
   sliderInput(
     "year", "Year:",
@@ -133,101 +172,111 @@ ui <- fluidPage(
   )
 )
 
+# ============================
+#          SERVER
+# ============================
+
 server <- function(input, output) {
-
-  output$categoryPlot <- renderPlot({
-
-    # Filter by year
-    df_year <- data_plot_categories %>% filter(Year == input$year)
-
-    p <- ggplot(df_year, aes(x = Category, y = Inflation, fill = RegionSign))
-
-    # Bars side to side and flip the coordinates
-    p <- p + geom_col(position = position_dodge(width = 0.9), width = 0.8) + coord_flip()
-
-    # Percentage
-    p <- p + geom_text(
-      aes(label = paste0(round(Inflation, 1), "%")),
-          position = position_dodge(width = 0.9),
-          hjust = ifelse(df_year$Inflation >= 0, -0.1, 1.1),
-          size = 3.2,
-          color = "black"
-    )
-
-    # Colors
-    p <- p + scale_fill_manual(
-      name = "Region & Sign",
-      values = c(
-        "Portugal_Positive"   = "#d73027",
-        "Portugal_Negative"   = "#1a9850",
-        "Europe_Avg_Positive" = "#fc8d59",
-        "Europe_Avg_Negative" = "#66bd63"
-      ),
-      labels = c(
-        "Portugal_Positive"   = "Portugal (Positive)",
-        "Portugal_Negative"   = "Portugal (Negative)",
-        "Europe_Avg_Positive" = "Europe Avg (Positive)",
-        "Europe_Avg_Negative" = "Europe Avg (Negative)"
-      )
-    )
-
-    p <- p + labs(title = "Inflation by Category: Portugal vs European Average", subtitle = paste("Year:", input$year),
-                  x = NULL, y = "Inflation (%)")
-
-    p <- p + theme_minimal(base_size = 14) +
-    theme(
-      plot.title      = element_text(face = "bold", size = 16),
-      plot.subtitle   = element_text(size = 14),
-      axis.text.y     = element_text(size = 11),
-      legend.position = "bottom",
-      legend.title    = element_text(face = "bold"),
-      legend.text     = element_text(size = 11),
-      plot.margin     = margin(10, 10, 30, 10)
-    )
-
-    print(p)
+  
+  # Subtítulos fora dos gráficos
+  output$subtitleCategory <- renderText({
+    paste("Portugal vs European Average - Year:", input$year)
   })
-
-  output$mapPlot <- renderPlot({
+  
+  output$subtitleMap <- renderText({
+    paste("Europe - Year:", input$year)
+  })
+  
+  # -------- Gráfico 1: Categorias --------
+  output$categoryPlot <- renderPlot(bg="#0C2947", {
+    df_year <- data_plot_categories %>% filter(Year == input$year)
+    
+    ggplot(df_year, aes(x = Category, y = Inflation, fill = RegionSign)) +
+      geom_col(position = position_dodge(width = 0.9), width = 0.8) +
+      coord_flip() +
+      geom_text(
+        aes(label = paste0(round(Inflation, 1), "%")),
+        position = position_dodge(width = 0.9),
+        hjust = ifelse(df_year$Inflation >= 0, -0.1, 1.1),
+        size = 3.2,
+        color = "white"
+      ) +
+      scale_fill_manual(
+        name = "Region & Sign",
+        values = c(
+          "Portugal_Positive"   = "#ff6666",
+          "Portugal_Negative"   = "#66ff66",
+          "Europe_Avg_Positive" = "#ff9999",
+          "Europe_Avg_Negative" = "#99ff99"
+        ),
+        labels = c(
+          "Portugal_Positive"   = "Portugal (Positive)",
+          "Portugal_Negative"   = "Portugal (Negative)",
+          "Europe_Avg_Positive" = "Europe Avg (Positive)",
+          "Europe_Avg_Negative" = "Europe Avg (Negative)"
+        )
+      ) +
+      labs(x = NULL, y = "Inflation (%)") +
+      theme_minimal(base_size = 14) +
+      theme(
+        plot.background  = element_rect(fill = "#0C2947", color = "#0C2947"),
+        panel.background = element_rect(fill = "#0C2947", color = NA),
+        plot.margin      = margin(10, 15, 10, 2),
+        panel.grid       = element_line(color = "#5a5a5a", linetype = "dotted"),
+        axis.text.y      = element_text(size = 11, color = "white"),
+        axis.text.x      = element_text(size = 11, color = "white"),
+        axis.title       = element_text(size = 12, color = "white"),
+        legend.position  = "bottom",
+        legend.title     = element_text(face = "bold", color = "white"),
+        legend.text      = element_text(size = 10, color = "white")
+      )
+  })
+  
+  # -------- Gráfico 2: Mapa --------
+  # -------- Gráfico 2: Mapa --------
+  output$mapPlot <- renderPlot(bg="#0C2947", {
     df_map <- data_map %>% filter(Year == input$year)
     europe_map <- europe %>% left_join(df_map, by = c("name" = "Country"))
-
-    # Countries with highest and lowest inflation
+    
     max_country <- df_map %>% filter(Inflation == max(Inflation, na.rm = TRUE)) %>% pull(Country)
     min_country <- df_map %>% filter(Inflation == min(Inflation, na.rm = TRUE)) %>% pull(Country)
-
-    p <- ggplot(europe_map)
-
-    p <- p + geom_sf(aes(fill = Inflation), color = "black", size = 0.3)
-
-    # Highlights Portugal, country with the highest inflation and lowest
-    p <- p + geom_sf(data = subset(europe_map, name == "Portugal"), fill = NA, color = "black", size = 1) +
-        geom_sf(data = subset(europe_map, name %in% min_country), fill = NA, color = "green", size = 1) +
-        geom_sf(data = subset(europe_map, name %in% max_country), fill = NA, color = "red", size = 1)
-
-    # Percentage
-    p <- p + geom_sf_text(
-      aes(label = ifelse(!is.na(Inflation), paste0(round(Inflation,1), "%"), "")),
-      size = 3.5,
-      color = "black",
-      fontface = "bold"
-    )
-
-    p <- p + scale_fill_gradient2(low = "#1a9850", mid = "white", high = "#d73027", midpoint = 0, name = "Inflation (%)") +
-         coord_sf(xlim = c(-25, 45), ylim = c(34, 72), expand = FALSE)
-
-    p <- p + labs(title = "Average Inflation by Country in Europe", subtitle = paste("Year:", input$year))
-
-    p <- p + theme_void() +
+    
+    ggplot(europe_map) +
+      geom_sf(aes(fill = Inflation), color = "#0C2947", size = 0.3, na.fill = "#6C819C") +  # linhas invisíveis
+      geom_sf(data = subset(europe_map, name == "Portugal"), fill = NA, color = "#0C2947", size = 1) +
+      geom_sf(data = subset(europe_map, name %in% min_country), fill = NA, color = "#66ff66", size = 1) +
+      geom_sf(data = subset(europe_map, name %in% max_country), fill = NA, color = "#ff6666", size = 1) +
+      geom_sf_text(
+        aes(label = ifelse(!is.na(Inflation), paste0(round(Inflation, 1), "%"), "")),
+        size = 3.5, color = "black", fontface = "bold"
+      ) +
+      scale_fill_gradient2(
+        low = "#66ff66",
+        mid = "white",
+        high = "#ff6666",
+        midpoint = 0,
+        name = "Inflation (%)",
+        na.value = "#6C819C"
+      ) +
+      coord_sf(xlim = c(-30, 50), ylim = c(20, 70), expand = FALSE, clip = "off") +
+      labs(x = NULL, y = NULL) +
+      theme_minimal() +
       theme(
-        plot.title = element_text(face = "bold", size = 16),
-        legend.position = "bottom",
-        legend.title = element_text(face = "bold")
+        plot.background   = element_rect(fill = "#0C2947", color = "#0C2947"),
+        panel.background  = element_rect(fill = "#0C2947", color = NA),
+        panel.grid        = element_blank(),
+        plot.margin       = margin(10, 15, 10, 15),
+        panel.spacing     = unit(0, "pt"),
+        legend.position   = "bottom",
+        legend.background = element_rect(fill = "#0C2947", color = NA),
+        legend.key        = element_rect(fill = "#0C2947", color = NA),
+        legend.title      = element_text(face = "bold", color = "white"),
+        legend.text       = element_text(color = "white", size = 10),
+        axis.text         = element_blank(),
+        axis.title        = element_blank(),
+        axis.ticks        = element_blank()
       )
-
-    print(p)
   })
 }
 
-## Runs the app
 shinyApp(ui, server)
