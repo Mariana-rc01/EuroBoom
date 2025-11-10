@@ -1,4 +1,5 @@
-setwd("C:/Users/iaras/MECD/VisualizacaoDados/projeto")
+#setwd("C:/Users/iaras/MECD/VisualizacaoDados/projeto")
+setwd("//wsl.localhost/Ubuntu-20.04/home/mariana/GitHub/EuroBoom")
 
 library(ggplot2)
 library(shiny)
@@ -14,7 +15,7 @@ library(rnaturalearthdata)
 data <- read_csv("Inflation.csv", skip = 1,
                  col_names = c("Year", "Country", "Category",
                                "Filter2", "Filter3", "Scale", "Symbol", "Value"))
-
+# Prepare and clean data in general
 data <- data %>%
   transmute(
     Year = as.numeric(str_trim(Year)),
@@ -23,12 +24,15 @@ data <- data %>%
     Value = as.numeric(Value)
   )
 
-# ============================
-#    CATEGORIES (Gráfico 1)
-# ============================
+# ===================================
+#   CATEGORIES (First Visualization)
+# ===================================
 
+# Data preparation
+# Remove Total (only interested in categories)
 data_categories <- data %>% filter(!Category %in% c("Total"))
 
+# Translate Categories
 categories_dict <- c(
   "Acessórios para o lar, equipamento doméstico e manutenção corrente da habitação" =
     "Household Equipment, Domestic Goods & Home Maintenance",
@@ -52,11 +56,12 @@ data_categories <- data_categories %>%
 
 all_categories <- unique(data_categories$Category)
 
-# Média Europeia
+# Calculate the European average by category and year
 europe_avg <- data_categories %>%
   group_by(Year, Category) %>%
   summarise(Europe_Avg = mean(Value, na.rm = TRUE), .groups = "drop")
 
+# Join both data (only Portugal on the first one)
 data_plot_categories <- data_categories %>%
   filter(Country == "Portugal") %>%
   left_join(europe_avg, by = c("Year", "Category")) %>%
@@ -69,6 +74,8 @@ data_plot_categories <- data_categories %>%
     Europe_Avg = as.numeric(Europe_Avg)
   )
 
+# Convert the columns Portugal and Europe_Avg in Region and the values of the inflation comes in new column called Inflation
+# Create new column for the colors with 'mutate'
 data_plot_categories <- data_plot_categories %>%
   pivot_longer(
     cols = c("Portugal", "Europe_Avg"),
@@ -83,15 +90,18 @@ data_plot_categories <- data_plot_categories %>%
   select(-Sign)
 
 # ============================
-#          MAPA (Gráfico 2)
+#  MAP (Second visualization)
 # ============================
 
+# Data preparation
 data_map <- data %>%
   filter(Category == "Total") %>%
   select(Year, Country, Inflation = Value)
 
+# Load map
 europe <- ne_countries(scale = "medium", continent = "Europe", returnclass = "sf")
 
+# Translate Countries
 countries_dict <- c(
   "Alemanha"       = "Germany",
   "Áustria"        = "Austria",
@@ -143,7 +153,7 @@ ui <- fluidPage(
   fluidRow(
     style = "padding:0; margin:0;",
     
-    # Gráfico 1
+    # First Visualization
     column(
       width = 6, style = "padding:0; margin:0;",
       h3("Inflation by Category", style = "color:white; margin-left:15px;"),
@@ -151,7 +161,7 @@ ui <- fluidPage(
       plotOutput("categoryPlot", height = "600px", width = "100%")
     ),
     
-    # Gráfico 2
+    # Second Visualization
     column(
       width = 6, style = "padding:0; margin:0;",
       h3("Average Inflation by Country", style = "color:white; margin-left:15px;"),
@@ -187,7 +197,7 @@ server <- function(input, output) {
     paste("Europe - Year:", input$year)
   })
   
-  # -------- Gráfico 1: Categorias --------
+  # -------- Visualization 1: Categories --------
   output$categoryPlot <- renderPlot(bg="#0C2947", {
     df_year <- data_plot_categories %>% filter(Year == input$year)
     
@@ -232,12 +242,12 @@ server <- function(input, output) {
       )
   })
   
-  # -------- Gráfico 2: Mapa --------
-  # -------- Gráfico 2: Mapa --------
+  # -------- Visualization 2: Map --------
   output$mapPlot <- renderPlot(bg="#0C2947", {
     df_map <- data_map %>% filter(Year == input$year)
     europe_map <- europe %>% left_join(df_map, by = c("name" = "Country"))
     
+    # Countries with highest and lowest inflation
     max_country <- df_map %>% filter(Inflation == max(Inflation, na.rm = TRUE)) %>% pull(Country)
     min_country <- df_map %>% filter(Inflation == min(Inflation, na.rm = TRUE)) %>% pull(Country)
     
