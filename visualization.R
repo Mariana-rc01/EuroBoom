@@ -7,6 +7,7 @@ library(tidyverse)
 library(sf)
 library(rnaturalearth)
 library(rnaturalearthdata)
+library(shinyWidgets)
 
 # ============================
 #            DATA
@@ -164,22 +165,49 @@ ui <- fluidPage(
     # Second Visualization
     column(
       width = 6, style = "padding:0; margin:0;",
-      h3("Average Inflation by Country", style = "color:white; margin-left:15px;"),
+      h3("Total Inflation by Country", style = "color:white; margin-left:15px;"),
       h5(textOutput("subtitleMap"), style = "color:white; margin-left:15px; margin-top:-5px;"),
       plotOutput("mapPlot", height = "700px", width = "100%")
     )
   ),
   
   br(),
-  sliderInput(
-    "year", "Year:",
-    min = min(data_plot_categories$Year),
-    max = max(data_plot_categories$Year),
-    value = min(data_plot_categories$Year),
-    step = 1,
-    sep = "",
-    animate = animationOptions(interval = 700, loop = TRUE)
-  )
+  fluidRow(
+    column(
+      width = 12, style = "padding:0 40px;",
+      sliderInput(
+        "year", "Year:",
+        min = min(data_plot_categories$Year),
+        max = max(data_plot_categories$Year),
+        value = min(data_plot_categories$Year),
+        step = 1,
+        sep = "",
+        ticks = TRUE,
+        animate = animationOptions(interval = 800, loop = TRUE)
+      )
+    )
+  ),
+  tags$style(HTML("
+    .irs {
+      width: 100% !important;
+    }
+  
+    label[for='year'], .irs .irs-grid-text, .irs .irs-min, .irs .irs-max {
+      color: white !important;
+      font-weight: bold;
+    }
+  
+    .irs .irs-line, .irs .irs-bar, .irs .irs-bar-edge {
+      background: #1E90FF !important;
+      border-radius: 7px !important;
+    }
+
+    .irs .irs-from, .irs .irs-to, .irs .irs-single {
+      background: #5500FF !important;
+      color: white !important;
+      border: none;
+    }
+  "))
 )
 
 # ============================
@@ -212,7 +240,6 @@ server <- function(input, output) {
         color = "white"
       ) +
       scale_fill_manual(
-        name = "Region & Sign",
         values = c(
           "Portugal_Positive"   = "#ff6666",
           "Portugal_Negative"   = "#66ff66",
@@ -226,21 +253,23 @@ server <- function(input, output) {
           "Europe_Avg_Negative" = "Europe Avg (Negative)"
         )
       ) +
-      labs(x = NULL, y = "Inflation (%)") +
+      labs(x = NULL, y = "Inflation (%)", fill = NULL) +  # optional: hide legend title
       theme_minimal(base_size = 14) +
       theme(
         plot.background  = element_rect(fill = "#0C2947", color = "#0C2947"),
         panel.background = element_rect(fill = "#0C2947", color = NA),
-        plot.margin      = margin(10, 15, 10, 2),
+        plot.margin      = margin(10, 40, 10, 5),
         panel.grid       = element_line(color = "#5a5a5a", linetype = "dotted"),
         axis.text.y      = element_text(size = 11, color = "white"),
         axis.text.x      = element_text(size = 11, color = "white"),
         axis.title       = element_text(size = 12, color = "white"),
         legend.position  = "bottom",
         legend.title     = element_text(face = "bold", color = "white"),
-        legend.text      = element_text(size = 10, color = "white")
+        legend.text      = element_text(size = 10, color = "white"),
+        legend.key.size  = unit(0.5, "lines")
       )
   })
+  
   
   # -------- Visualization 2: Map --------
   output$mapPlot <- renderPlot(bg="#0C2947", {
@@ -290,3 +319,4 @@ server <- function(input, output) {
 }
 
 shinyApp(ui, server)
+
