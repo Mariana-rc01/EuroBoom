@@ -56,20 +56,48 @@ data_categories <- data_categories %>%
 
 all_categories <- unique(data_categories$Category)
 
+# Group in only 4 categories
+group_dict <- c(
+    "Household Equipment, Domestic Goods & Home Maintenance" = "Housing & Utilities",
+    "Housing, Water, Electricity, Gas & Other Fuels" = "Housing & Utilities",
+    
+    "Food & Non-Alcoholic Beverages" = "Food & Leisure",
+    "Restaurants & Hotels" = "Food & Leisure",
+    "Recreation & Culture" = "Food & Leisure",
+    
+    "Health" = "Health & Education",
+    "Education" = "Health & Education",
+    
+    "Alcoholic Beverages & Tobacco" = "Other Goods & Services",
+    "Miscellaneous Goods & Services" = "Other Goods & Services",
+    "Communications" = "Other Goods & Services",
+    "Transport" = "Other Goods & Services",
+    "Clothing & Footwear" = "Other Goods & Services"
+)
+
+data_categories <- data_categories %>% 
+  mutate(Group = recode(Category, !!!group_dict))
+
 # Calculate the European average by category and year
 europe_avg <- data_categories %>%
-  group_by(Year, Category) %>%
+  group_by(Year, Group) %>%
   summarise(Europe_Avg = mean(Value, na.rm = TRUE), .groups = "drop")
 
-# Join both data (only Portugal on the first one)
-data_plot_categories <- data_categories %>%
+# Calculate the Portugal average by category and year
+portugal_avg <- data_categories %>%
   filter(Country == "Portugal") %>%
-  left_join(europe_avg, by = c("Year", "Category")) %>%
-  rename(Portugal = Value) %>%
-  select(Year, Category, Portugal, Europe_Avg) %>%
+  group_by(Year, Group) %>%
+  summarise(Portugal = mean(Value, na.rm = TRUE), .groups = "drop")
+
+# Join both data (only Portugal on the first one)
+data_plot_categories <- portugal_avg %>%
+  left_join(europe_avg, by = c("Year", "Group")) %>%
   mutate(
     Year       = as.integer(Year),
-    Category   = factor(Category, levels = all_categories),
+    Group      = factor(Group, levels = c("Housing & Utilities",
+                                          "Food & Leisure",
+                                          "Health & Education",
+                                          "Other Goods & Services")),
     Portugal   = as.numeric(Portugal),
     Europe_Avg = as.numeric(Europe_Avg)
   )
@@ -150,25 +178,37 @@ ui <- fluidPage(
     tags$div("Inflation Dashboard: Portugal vs Europe", style = "color:white;")
   ),
   
+  # Subtitle
+  tags$div(paste0("Date: ", Sys.Date(), " | Authors: Beatriz Iara, Luana Lima, Mariana Rocha"),
+           style = "color:white; font-size:12px; margin-bottom:15px;"),
+  
   fluidRow(
     style = "padding:0; margin:0;",
     
-    # First Visualization
+    # Left side: 3 Visualizations (categoryPlot, temporalPlot and rankedPlot)
     column(
-      width = 6, style = "padding:0; margin:0;",
-      h3("Inflation by Category", style = "color:white; margin-left:15px;"),
+      width = 6, style = "padding:0 10px; margin:3;",
+      
+      h4("Percentage Change in Inflation by Category Relative to Last Year", style = "color:white; margin-left:5px;"),
       h5(textOutput("subtitleCategory"), style = "color:white; margin-left:15px; margin-top:-5px;"),
-      plotOutput("categoryPlot", height = "600px", width = "100%")
+      plotOutput("categoryPlot", height = "200px", width = "100%"),
+      
+      h4("ToDo - temporalPlot", style = "color:white; margin-left:5px; margin-top:15px;"),
+      plotOutput("toDo", height = "200px", width = "100%"),
+      
+      h4("ToDo - rankedPlot", style = "color:white; margin-left:5px; margin-top:15px;"),
+      plotOutput("toDo", height = "200px", width = "100%")
     ),
-    
-    # Second Visualization
+
+    # Right side: map
     column(
       width = 6, style = "padding:0; margin:0;",
-      h3("Total Inflation by Country", style = "color:white; margin-left:15px;"),
+      h3("Yearly Percentage Change in Inflation by Country", style = "color:white; margin-left:15px;"),
       h5(textOutput("subtitleMap"), style = "color:white; margin-left:15px; margin-top:-5px;"),
       plotOutput("mapPlot", height = "700px", width = "100%")
     )
-  ),
+  )
+  ,
   
   br(),
   fluidRow(
@@ -217,18 +257,18 @@ server <- function(input, output) {
   
   # Subtítulos fora dos gráficos
   output$subtitleCategory <- renderText({
-    paste("Portugal vs European Average - Year:", input$year)
+    paste("Year:", input$year)
   })
   
   output$subtitleMap <- renderText({
     paste("Europe - Year:", input$year)
   })
-  
+
   # -------- Visualization 1: Categories --------
   output$categoryPlot <- renderPlot(bg="#0C2947", {
     df_year <- data_plot_categories %>% filter(Year == input$year)
     
-    ggplot(df_year, aes(x = Category, y = Inflation, fill = RegionSign)) +
+    ggplot(df_year, aes(x = Group, y = Inflation, fill = RegionSign)) +
       geom_col(position = position_dodge(width = 0.9), width = 0.8) +
       coord_flip() +
       geom_text(
