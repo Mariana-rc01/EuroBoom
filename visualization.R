@@ -60,14 +60,14 @@ all_categories <- unique(data_categories$Category)
 group_dict <- c(
     "Household Equipment, Domestic Goods & Home Maintenance" = "Housing & Utilities",
     "Housing, Water, Electricity, Gas & Other Fuels" = "Housing & Utilities",
-    
+
     "Food & Non-Alcoholic Beverages" = "Food & Leisure",
     "Restaurants & Hotels" = "Food & Leisure",
     "Recreation & Culture" = "Food & Leisure",
-    
+
     "Health" = "Health & Education",
     "Education" = "Health & Education",
-    
+
     "Alcoholic Beverages & Tobacco" = "Other Goods & Services",
     "Miscellaneous Goods & Services" = "Other Goods & Services",
     "Communications" = "Other Goods & Services",
@@ -75,7 +75,7 @@ group_dict <- c(
     "Clothing & Footwear" = "Other Goods & Services"
 )
 
-data_categories <- data_categories %>% 
+data_categories <- data_categories %>%
   mutate(Group = recode(Category, !!!group_dict))
 
 # Calculate the European average by category and year
@@ -168,34 +168,56 @@ data_map <- data_map %>%
 # ============================
 
 ui <- fluidPage(
-  tags$style(HTML("
-    html, body { background-color: #0C2947 !important; margin: 0 !important; padding: 0 !important; overflow-x: hidden; }
-    .container-fluid { background-color: #0C2947 !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
-    .row, .col-sm-6, .shiny-plot-output { background-color: #0C2947 !important; margin: 0 !important; padding: 0 !important; }
-  ")),
-  
+  tags$head(
+    tags$link(
+      href = "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap",
+      rel = "stylesheet"
+    ),
+    tags$style(HTML("
+    html, body {
+      background-color: #0C2947 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow-x: hidden;
+      font-family: 'Montserrat', sans-serif !important;
+    }
+
+    .container-fluid {
+      background-color: #0C2947 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      font-family: 'Montserrat', sans-serif !important;
+    }
+
+    h3, h4, h5, h6, .irs, label {
+      font-family: 'Montserrat', sans-serif !important;
+    }
+  "))
+  ),
+
   titlePanel(
     tags$div("Inflation Dashboard: Portugal vs Europe", style = "color:white;")
   ),
-  
+
   # Subtitle
   tags$div(paste0("Date: ", Sys.Date(), " | Authors: Beatriz Iara, Luana Lima, Mariana Rocha"),
            style = "color:white; font-size:12px; margin-bottom:15px;"),
-  
+
   fluidRow(
     style = "padding:0; margin:0;",
-    
+
     # Left side: 3 Visualizations (categoryPlot, temporalPlot and rankedPlot)
     column(
       width = 6, style = "padding:0 10px; margin:3;",
-      
+
       h4("Percentage Change in Inflation by Category Relative to Last Year", style = "color:white; margin-left:5px;"),
       h5(textOutput("subtitleCategory"), style = "color:white; margin-left:15px; margin-top:-5px;"),
       plotOutput("categoryPlot", height = "200px", width = "100%"),
-      
+
       h4("ToDo - temporalPlot", style = "color:white; margin-left:5px; margin-top:15px;"),
       plotOutput("toDo", height = "200px", width = "100%"),
-      
+
       h4("ToDo - rankedPlot", style = "color:white; margin-left:5px; margin-top:15px;"),
       plotOutput("toDo", height = "200px", width = "100%")
     ),
@@ -207,9 +229,8 @@ ui <- fluidPage(
       h5(textOutput("subtitleMap"), style = "color:white; margin-left:15px; margin-top:-5px;"),
       plotOutput("mapPlot", height = "700px", width = "100%")
     )
-  )
-  ,
-  
+  ),
+
   br(),
   fluidRow(
     column(
@@ -230,12 +251,12 @@ ui <- fluidPage(
     .irs {
       width: 100% !important;
     }
-  
+
     label[for='year'], .irs .irs-grid-text, .irs .irs-min, .irs .irs-max {
       color: white !important;
       font-weight: bold;
     }
-  
+
     .irs .irs-line, .irs .irs-bar, .irs .irs-bar-edge {
       background: #1E90FF !important;
       border-radius: 7px !important;
@@ -254,12 +275,12 @@ ui <- fluidPage(
 # ============================
 
 server <- function(input, output) {
-  
+
   # Subtítulos fora dos gráficos
   output$subtitleCategory <- renderText({
     paste("Year:", input$year)
   })
-  
+
   output$subtitleMap <- renderText({
     paste("Europe - Year:", input$year)
   })
@@ -267,7 +288,7 @@ server <- function(input, output) {
   # -------- Visualization 1: Categories --------
   output$categoryPlot <- renderPlot(bg="#0C2947", {
     df_year <- data_plot_categories %>% filter(Year == input$year)
-    
+
     ggplot(df_year, aes(x = Group, y = Inflation, fill = RegionSign)) +
       geom_col(position = position_dodge(width = 0.9), width = 0.8) +
       coord_flip() +
@@ -308,17 +329,16 @@ server <- function(input, output) {
         legend.key.size  = unit(0.5, "lines")
       )
   })
-  
-  
+
   # -------- Visualization 2: Map --------
   output$mapPlot <- renderPlot(bg="#0C2947", {
     df_map <- data_map %>% filter(Year == input$year)
     europe_map <- europe %>% left_join(df_map, by = c("name" = "Country"))
-    
+
     # Countries with highest and lowest inflation
     max_country <- df_map %>% filter(Inflation == max(Inflation, na.rm = TRUE)) %>% pull(Country)
     min_country <- df_map %>% filter(Inflation == min(Inflation, na.rm = TRUE)) %>% pull(Country)
-    
+
     ggplot(europe_map) +
       geom_sf(aes(fill = Inflation), color = "#0C2947", size = 0.3, na.fill = "#6C819C") +  # linhas invisíveis
       geom_sf(data = subset(europe_map, name == "Portugal"), fill = NA, color = "#0C2947", size = 1) +
