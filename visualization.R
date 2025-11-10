@@ -7,7 +7,6 @@ library(tidyverse)
 library(sf)
 library(rnaturalearth)
 library(rnaturalearthdata)
-library(shinyWidgets)
 
 # ============================
 #            DATA
@@ -253,7 +252,7 @@ server <- function(input, output) {
           "Europe_Avg_Negative" = "Europe Avg (Negative)"
         )
       ) +
-      labs(x = NULL, y = "Inflation (%)", fill = NULL) +  # optional: hide legend title
+      labs(x = NULL, y = "Inflation (%)", fill = NULL) + # hide legend title
       theme_minimal(base_size = 14) +
       theme(
         plot.background  = element_rect(fill = "#0C2947", color = "#0C2947"),
