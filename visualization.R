@@ -1,5 +1,6 @@
 #setwd("C:/Users/iaras/MECD/VisualizacaoDados/projeto")
-setwd("//wsl.localhost/Ubuntu-20.04/home/mariana/GitHub/EuroBoom")
+#setwd("//wsl.localhost/Ubuntu-20.04/home/mariana/GitHub/EuroBoom")
+setwd("/Users/luanalima/Documents/Mestrado/VPD/EuroBoom")
 
 library(ggplot2)
 library(shiny)
@@ -7,6 +8,7 @@ library(tidyverse)
 library(sf)
 library(rnaturalearth)
 library(rnaturalearthdata)
+library(ggtext)
 
 # ============================
 #            DATA
@@ -164,6 +166,19 @@ data_map <- data_map %>%
   mutate(Country = recode(Country, !!!countries_dict))
 
 # ============================
+#  RANK (Third visualization)
+# ============================
+
+# Data preparation
+data_rank <- data %>%
+  filter(Category == "Total") %>%
+  select(Year, Country, Inflation = Value) %>% 
+  mutate(Country = recode(Country, !!!countries_dict)) %>% 
+  group_by(Year) %>%
+  mutate(Rank = min_rank(Inflation)) %>%
+  ungroup()
+
+# ============================
 #            UI
 # ============================
 
@@ -218,8 +233,9 @@ ui <- fluidPage(
       h4("ToDo - temporalPlot", style = "color:white; margin-left:5px; margin-top:15px;"),
       plotOutput("toDo", height = "200px", width = "100%"),
 
-      h4("ToDo - rankedPlot", style = "color:white; margin-left:5px; margin-top:15px;"),
-      plotOutput("toDo", height = "200px", width = "100%")
+      h4("Ranking of Annual Percentage Change in Inflation by Country (1996 - 2024)", style = "color:white; margin-left:5px; margin-top:15px;"),
+      #h5("Annual HICP - lowest to highest", style = "color:white; margin-left:15px; margin-top:-5px;"),
+      plotOutput("rankPlot", height = "200px", width = "100%")
     ),
 
     # Right side: map
@@ -343,7 +359,7 @@ server <- function(input, output) {
       geom_sf(aes(fill = Inflation), color = "#0C2947", size = 0.3, na.fill = "#6C819C") +  # linhas invisíveis
       geom_sf(data = subset(europe_map, name == "Portugal"), fill = NA, color = "#0C2947", size = 1) +
       geom_sf(data = subset(europe_map, name %in% min_country), fill = NA, color = "#66ff66", size = 1) +
-      geom_sf(data = subset(europe_map, name %in% max_country), fill = NA, color = "#ff6666", size = 1) +
+      geom_sf(data = subset(europe_map, name %in% max_country), fill = NA, color = "#ff0000", size = 1) +
       geom_sf_text(
         aes(label = ifelse(!is.na(Inflation), paste0(round(Inflation, 1), "%"), "")),
         size = 3.5, color = "black", fontface = "bold"
@@ -373,6 +389,80 @@ server <- function(input, output) {
         axis.text         = element_blank(),
         axis.title        = element_blank(),
         axis.ticks        = element_blank()
+      )
+  })
+  
+  # -------- Visualization 3: Rank over time --------
+  output$rankPlot <- renderPlot(bg = "#0C2947", {
+    
+    first_year  <- min(data_rank$Year, na.rm = TRUE)
+    last_year   <- max(data_rank$Year, na.rm = TRUE)
+    n_countries <- max(data_rank$Rank, na.rm = TRUE)
+    
+    # Side labels with Portugal highlighted
+    make_labels <- function(d, y) {
+      d %>%
+        filter(Year == y) %>%
+        group_by(Rank) %>%
+        summarise(
+          Year   = y,
+          has_pt = any(Country == "Portugal"),
+          others_raw = paste(setdiff(sort(unique(Country)), "Portugal"), collapse = ", "),
+          .groups = "drop"
+        ) %>%
+        mutate(
+          label_html = ifelse(
+            has_pt,
+            paste0("<span style='color:#FFD700;font-weight:700'>Portugal</span>",
+                   ifelse(others_raw != "", paste0(", ", others_raw), "")),
+            others_raw
+          )
+        )
+    }
+    
+    side_labels <- bind_rows(
+      make_labels(data_rank, first_year) %>% mutate(side = "left"),
+      make_labels(data_rank, last_year) %>% mutate(side = "right")) %>% 
+      mutate(
+        x = if_else(side == "left", first_year, last_year),
+        hjust = if_else(side == "left", 1.05, 0.00))
+    
+    ggplot(data_rank, aes(x = Year, y = Rank, group = Country)) +
+      geom_segment(
+        data = data.frame(y = 1:n_countries),
+        aes(x = first_year, xend = last_year, y = y, yend = y),
+        inherit.aes = FALSE,
+        linetype = "dotted", color = "#5a5a5a", linewidth = 0.3) +
+      
+      geom_line(data = subset(data_rank, Country != "Portugal"), color = "grey70", alpha = 0.6, linewidth = 0.6) +
+      geom_point(data = subset(data_rank, Country != "Portugal"), color = "grey70", alpha = 0.6, size = 1.1) +
+      # Highlight Portugal
+      geom_line(data = subset(data_rank, Country == "Portugal"), color = "#FFD700", linewidth = 1.6) +
+      geom_point(data = subset(data_rank, Country == "Portugal"), color = "#FFD700", size = 2.2) +
+      
+      geom_richtext(
+        data = side_labels,
+        aes(x = x, y = Rank, label = label_html, hjust = hjust),
+        color = "white", size = 2.6,
+        label.size = 0, fill = NA, label.color = NA,
+        inherit.aes = FALSE) +
+      
+      scale_y_reverse(breaks = 1:n_countries, expand = expansion(mult = c(0.02, 0.10))) +
+      scale_x_continuous(limits = c(first_year, last_year), 
+                         breaks = seq(first_year, last_year, by = 4), 
+                         expand = expansion(mult = c(0, 0))) +
+      coord_cartesian(clip = "off") +
+      labs(x = NULL, y = NULL) +
+      theme_minimal(base_size = 12) +
+      theme(
+        plot.background  = element_rect(fill = "#0C2947", color = "#0C2947"),
+        panel.background = element_rect(fill = "#0C2947", color = NA),
+        panel.grid.major.y = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor   = element_blank(),
+        axis.text.x  = element_text(color = "white", size = 9),
+        axis.text.y  = element_blank(),
+        plot.margin  = margin(6, 100, 6, 70)
       )
   })
 }
