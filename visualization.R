@@ -276,7 +276,7 @@ ui <- fluidPage(
   ),
 
   titlePanel(
-    tags$div("Where Does Portugal Stand in UE Inflation Landscape?", style = "color:white;")
+    tags$div("Where Does Portugal Stand in UE Inflation Landscape? (2000-2024)", style = "color:white;")
   ),
 
   # Subtitle
@@ -467,13 +467,13 @@ ui <- fluidPage(
   ),
 
   fluidRow(
-    style = "padding:0 18px; margin-top:10px;",
+    style = "padding:0 50px; margin-top:10px;",
     column(
       width = 12,
       h3("Ranking of Annual Percentage Change in Inflation by Country",
          style = "color:white; margin-left:5px;"),
       div(
-        style = "margin-left:15px; margin-bottom:10px; color:white; font-size:13px; display:flex; gap:25px; flex-wrap:wrap;",
+        style = "margin-left:50px; margin-bottom:10px; color:white; font-size:13px; display:flex; gap:25px; flex-wrap:wrap;",
         
         # Portugal
         div(
@@ -544,6 +544,10 @@ server <- function(input, output) {
         hjust = ifelse(df_year$Inflation >= 0, -0.1, 1.1),
         size = 3.2,
         color = "white"
+      ) +
+      labs(
+        y = "Inflation (%)",
+        x = "Categories" 
       ) +
       scale_fill_manual(
         values = c(
@@ -886,7 +890,7 @@ server <- function(input, output) {
         panel.grid.minor   = element_blank(),
         axis.text.x  = element_text(color = "white", size = 9),
         axis.text.y  = element_blank(),
-        plot.margin  = margin(6, 100, 6, 70)
+        plot.margin  = margin(10, 140, 10, 120)
       )
   })
 }
