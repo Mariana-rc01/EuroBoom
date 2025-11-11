@@ -301,7 +301,7 @@ ui <- fluidPage(
           div(
         style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #F5A623 60%, #2ECC71 60%);
+          background: linear-gradient(to bottom, #F5A623);
           border: 1px solid white;
           border-radius: 2px;
         "
@@ -315,7 +315,7 @@ ui <- fluidPage(
           div(
         style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #E63946 60%, #2A9D8F 60%);
+          background: linear-gradient(to bottom, #E63946 60%);
           border: 1px solid white;
           border-radius: 2px;
         "
@@ -440,7 +440,7 @@ ui <- fluidPage(
           div(
             style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #F5A623 60%, #2ECC71 60%);
+          background: linear-gradient(to bottom, #F5A623 60%);
           border: 1px solid white;
           border-radius: 2px;
         "
@@ -454,7 +454,7 @@ ui <- fluidPage(
           div(
             style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #E63946 60%, #2A9D8F 60%);
+          background: linear-gradient(to bottom, #E63946 60%);
           border: 1px solid white;
           border-radius: 2px;
         "
@@ -548,9 +548,9 @@ server <- function(input, output) {
       scale_fill_manual(
         values = c(
           "Portugal_Positive"   = "#F5A623",
-          "Portugal_Negative"   = "#2ECC71",
+          "Portugal_Negative"   = "#F5A623",
           "Europe_Avg_Positive" = "#E63946",
-          "Europe_Avg_Negative" = "#2A9D8F"
+          "Europe_Avg_Negative" = "#E63946"
         ),
         labels = c(
           "Portugal_Positive"   = "Portugal (Positive)",
@@ -559,7 +559,6 @@ server <- function(input, output) {
           "Europe_Avg_Negative" = "Europe Avg (Negative)"
         )
       ) +
-      labs(x = NULL, y = "Inflation (%)", fill = NULL) + # hide legend title
       theme_minimal(base_size = 14) +
       theme(
         plot.background  = element_rect(fill = "#0C2947", color = "#0C2947"),
@@ -569,9 +568,7 @@ server <- function(input, output) {
         axis.text.y      = element_text(size = 11, color = "white"),
         axis.text.x      = element_text(size = 11, color = "white"),
         axis.title       = element_text(size = 12, color = "white"),
-        legend.position  = "bottom",
-        legend.title     = element_text(face = "bold", color = "white"),
-        legend.text      = element_text(size = 10, color = "white"),
+        legend.position  = "none",
         legend.key.size  = unit(0.5, "lines")
       )
   })
@@ -590,6 +587,10 @@ server <- function(input, output) {
     max_country <- df_map %>% filter(Inflation == max(Inflation, na.rm = TRUE)) %>% mutate(Type = "Max")
     min_country <- df_map %>% filter(Inflation == min(Inflation, na.rm = TRUE)) %>% mutate(Type = "Min")
     portugal     <- df_map %>% filter(Country == "Portugal") %>% mutate(Type = "Portugal")
+
+    if ("Portugal" %in% c(min_country, max_country)) {
+      portugal <- NULL
+    }
 
     highlight_countries <- bind_rows(max_country, min_country, portugal)
 
@@ -717,25 +718,6 @@ server <- function(input, output) {
                color = "white", size = 3.5, fontface = "bold", hjust = 0.5) +
       annotate("text", x = (2022 + 2024)/2, y = top_y, label = "Start of Russia–Ukraine war",
                color = "white", size = 3.5, fontface = "bold", hjust = 0.5) +
-
-      # Annotation for war event
-      geom_segment(
-        data = data.frame(x = 2022, xend = 2020.5, y = mid_value_2022, yend = mid_value_2022),
-        aes(x = x, xend = xend, y = y, yend = yend),
-        color = "white",
-        linewidth = 0.8
-      ) +
-
-      annotate(
-        "label",
-        x = 2020.25,
-        y = mid_value_2022,
-        label = "Start of Russia–Ukraine war Extra",
-        fill = "#1A3E66",
-        color = "white",
-        size = 3.5,
-        label.size = 0  # remove borda extra
-      ) +
 
       # Segments connecting Portugal vs EU
       geom_segment(aes(y = Portugal, yend = Europe_Avg, xend = Year),
