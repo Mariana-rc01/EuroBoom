@@ -280,11 +280,11 @@ ui <- fluidPage(
   ),
 
   # Subtitle
-  tags$div(paste0("Date: ", Sys.Date(), " | Authors: Beatriz Iara, Luana Lima, Mariana Rocha"),
+  tags$div(paste0("Date: ", Sys.Date(), " | Authors: Beatriz Silva, Luana Lima, Mariana Rocha"),
            style = "color:white; font-size:12px; margin-bottom:15px;"),
 
   fluidRow(
-    style = "padding:0; margin:0; margin-bottom:0px;",  # colado no slider
+    style = "padding:0; margin:0; margin-bottom:0px;",
 
     # Category plot (left)
     column(
@@ -301,7 +301,7 @@ ui <- fluidPage(
           div(
         style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #F5A623 60%, #D72638 60%);
+          background: linear-gradient(to bottom, #F5A623 60%, #2ECC71 60%);
           border: 1px solid white;
           border-radius: 2px;
         "
@@ -315,12 +315,12 @@ ui <- fluidPage(
           div(
         style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #3A6EA5 60%, #FF6F61 60%);
+          background: linear-gradient(to bottom, #E63946 60%, #2A9D8F 60%);
           border: 1px solid white;
           border-radius: 2px;
         "
           ),
-          "EU Average"
+          "UE Average"
         )
       ),
 
@@ -431,27 +431,92 @@ ui <- fluidPage(
       width = 12,
       h3("Total Inflation Over Time", style = "color:white; margin-left:5px;"),
       h5(textOutput("subtitleTotal"), style = "color:#dfefff; margin-left:5px; margin-top:-5px;"),
+      div(
+        style = "margin-left:15px; margin-bottom:10px; color:white; font-size:13px; display:flex; gap:25px; flex-wrap:wrap;",
+        
+        # Portugal
+        div(
+          style = "display:flex; align-items:center; gap:6px;",
+          div(
+            style = "
+          width:14px; height:14px;
+          background: linear-gradient(to bottom, #F5A623 60%, #2ECC71 60%);
+          border: 1px solid white;
+          border-radius: 2px;
+        "
+          ),
+          "Portugal"
+        ),
+        
+        # EU Average
+        div(
+          style = "display:flex; align-items:center; gap:6px;",
+          div(
+            style = "
+          width:14px; height:14px;
+          background: linear-gradient(to bottom, #E63946 60%, #2A9D8F 60%);
+          border: 1px solid white;
+          border-radius: 2px;
+        "
+          ),
+          "UE Average"
+        )
+      ),
       plotOutput("totalPlot", height = "350px", width = "100%")
     )
   ),
 
   fluidRow(
     style = "padding:0 18px; margin-top:10px;",
-    # Ranking of Annual % Change (right)
     column(
-      width = 8,
+      width = 12,
       h3("Ranking of Annual Percentage Change in Inflation by Country",
-        style = "color:white; margin-left:5px;"),
-      # h5("Annual HICP - lowest to highest", style = "color:white; margin-left:15px; margin-top:-5px;"),
+         style = "color:white; margin-left:5px;"),
+      div(
+        style = "margin-left:15px; margin-bottom:10px; color:white; font-size:13px; display:flex; gap:25px; flex-wrap:wrap;",
+        
+        # Portugal
+        div(
+          style = "display:flex; align-items:center; gap:6px;",
+          div(
+            style = "
+          width:14px; height:14px;
+          background: linear-gradient(to bottom, #FFD700);
+          border: 1px solid white;
+          border-radius: 2px;
+        "
+          ),
+          "Portugal"
+        ),
+        
+        # Selected Countries
+        div(
+          style = "display:flex; align-items:center; gap:6px;",
+          div(
+            style = "
+          width:14px; height:14px;
+          background: linear-gradient(to bottom, #FF6F3C);
+          border: 1px solid white;
+          border-radius: 2px;
+        "
+          ),
+          "Selected Countries"
+        )
+      ),
       plotOutput("rankPlot", height = "350px", width = "100%")
-    ),
-
+    )
+  ),
+  
+  fluidRow(
+    style = "padding:5px 18px; margin-top:5px;",
     column(
-      width = 4,
+      width = 12,
       h5("Select a country to highlight:", style = "color:white; margin-left:5px;"),
       uiOutput("countryButtons")
     )
-  )
+  ),
+
+  br()
 )
 
 # ============================
@@ -464,7 +529,7 @@ server <- function(input, output) {
   # Plot 1: Category-wise inflation
   # ===============================
   output$subtitleCategory <- renderText({
-    paste("How inflation varies by category: Portugal in comparison with the EU average in", input$year)
+    paste("How inflation varies by category: Portugal in comparison with the UE average in", input$year)
   })
 
   output$categoryPlot <- renderPlot(bg="#0C2947", {
@@ -483,9 +548,9 @@ server <- function(input, output) {
       scale_fill_manual(
         values = c(
           "Portugal_Positive"   = "#F5A623",
-          "Portugal_Negative"   = "#D72638",
-          "Europe_Avg_Positive" = "#3A6EA5",
-          "Europe_Avg_Negative" = "#FF6F61"
+          "Portugal_Negative"   = "#2ECC71",
+          "Europe_Avg_Positive" = "#E63946",
+          "Europe_Avg_Negative" = "#2A9D8F"
         ),
         labels = c(
           "Portugal_Positive"   = "Portugal (Positive)",
@@ -680,7 +745,7 @@ server <- function(input, output) {
       geom_point(aes(y = Portugal),
                  shape = 21, fill = "#F5A623", color = "white", stroke = 1.5, size = 6) +
       geom_point(aes(y = Europe_Avg),
-                 shape = 21, fill = "#3A6EA5", color = "white", stroke = 1.5, size = 6) +
+                 shape = 21, fill = "#E63946", color = "white", stroke = 1.5, size = 6) +
 
       # Rótulos
       geom_text(aes(
@@ -820,7 +885,7 @@ server <- function(input, output) {
       geom_richtext(
         data = side_labels,
         aes(x = x, y = Rank, label = label_html, hjust = hjust),
-        color = "white", size = 2.6,
+        color = "white", size = 3,
         label.size = 0, fill = NA, label.color = NA,
         inherit.aes = FALSE) +
 
