@@ -1,8 +1,8 @@
 # ============================
 # Set working directory
 # ============================
-#setwd("C:/Users/iaras/MECD/VisualizacaoDados/projeto")
-setwd("//wsl.localhost/Ubuntu-20.04/home/mariana/GitHub/EuroBoom")
+setwd("C:/Users/iaras/MECD/VisualizacaoDados/projeto")
+#setwd("//wsl.localhost/Ubuntu-20.04/home/mariana/GitHub/EuroBoom")
 #setwd("/Users/luanalima/Documents/Mestrado/VPD/EuroBoom")
 
 # ============================
@@ -301,21 +301,21 @@ ui <- fluidPage(
           div(
         style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #F5A623);
+          background: linear-gradient(to bottom, #FFE680 60%, #7AA7D4 60%);
           border: 1px solid white;
           border-radius: 2px;
         "
           ),
           "Portugal"
         ),
-
+       
         # EU Average
         div(
           style = "display:flex; align-items:center; gap:6px;",
           div(
         style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #E63946 60%);
+          background: linear-gradient(to bottom, #F5A623 60%, #3A6EA5 60%);
           border: 1px solid white;
           border-radius: 2px;
         "
@@ -362,7 +362,7 @@ ui <- fluidPage(
             div(style='width:14px; height:14px; border:2px solid #F5A623; background:transparent; margin-right:6px;'),
             "Min Inflation")
       ),
-
+     
       # Gradient for map fill
       div(
         style = "margin-left:15px; margin-bottom:5px;",
@@ -370,7 +370,7 @@ ui <- fluidPage(
        width:260px;
        height:18px;
        border:1px solid white;
-       background: linear-gradient(to right, #65C3A5, #F6E7A2, #EB4D4D);
+       background: linear-gradient(to right, #3A6EA5, #C7DDF1, #F5A623);
        ")
       ),
       div(
@@ -551,10 +551,11 @@ server <- function(input, output) {
       ) +
       scale_fill_manual(
         values = c(
-          "Portugal_Positive"   = "#F5A623",
-          "Portugal_Negative"   = "#F5A623",
-          "Europe_Avg_Positive" = "#E63946",
-          "Europe_Avg_Negative" = "#E63946"
+          "Portugal_Positive"   = "#FFE680",
+          "Portugal_Negative"   = "#7AA7D4",
+          "Europe_Avg_Positive" = "#F5A623",
+          "Europe_Avg_Negative" = "#3A6EA5"
+          
         ),
         labels = c(
           "Portugal_Positive"   = "Portugal (Positive)",
@@ -646,9 +647,9 @@ server <- function(input, output) {
         hjust = 0, nudge_x = 1
       ) +
       scale_fill_gradient2(
-        low      = "#65C3A5",
-        mid      = "#F6E7A2",
-        high     = "#EB4D4D",
+        low      = "#3A6EA5",
+        mid      = "#C7DDF1",
+        high     = "#F5A623", 
         midpoint = 0,
         name     = "Inflation (%)",
         na.value = "#223B5A"
