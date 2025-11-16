@@ -2,8 +2,9 @@
 # Set working directory
 # ============================
 #setwd("C:/Users/iaras/MECD/VisualizacaoDados/projeto")
-setwd("//wsl.localhost/Ubuntu-20.04/home/mariana/GitHub/EuroBoom")
-#setwd("/Users/luanalima/Documents/Mestrado/VPD/EuroBoom")
+#setwd("//wsl.localhost/Ubuntu-20.04/home/mariana/GitHub/EuroBoom")
+#
+setwd("/Users/luanalima/Documents/Mestrado/VPD/EuroBoom")
 
 # ============================
 # Libraries
@@ -202,7 +203,7 @@ data_rank <- data %>%
   select(Year, Country, Inflation = Value) %>%
   mutate(Country = recode(Country, !!!countries_dict)) %>%
   group_by(Year) %>%
-  mutate(Rank = min_rank(Inflation)) %>%
+  mutate(Rank = min_rank(desc(Inflation))) %>%
   ungroup()
 
 # ============================
@@ -267,7 +268,7 @@ ui <- fluidPage(
   ),
 
   titlePanel(
-    tags$div("Where Does Portugal Stand in UE Inflation Landscape? (2000-2024)", style = "color:white;margin-left:15px;")
+    tags$div("Where Does Portugal Stand in EU Inflation Landscape? (2000-2024)", style = "color:white;margin-left:15px;")
   ),
 
   # Explanation paragraph
@@ -282,7 +283,7 @@ ui <- fluidPage(
   Conversely, inflation significantly above 2% can also be problematic, as sharp increases in prices are difficult for households and businesses to adjust to in a short period.", 
     style = "color:white; font-size:14px; margin-left:15px; margin-top:5px; margin-bottom:5px;"
   ),
-
+  
   tags$p(
     "According to the ceteris paribus assumption, these figures show the pure effect of price changes, assuming all other factors remain unchanged. This allows for a clearer comparison of inflation trends across countries and categories.", 
     style = "color:white; font-size:13px; margin-left:15px; margin-top:0px; margin-bottom:15px; font-style:italic;"
@@ -307,7 +308,7 @@ ui <- fluidPage(
           div(
         style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #FFE680 60%, #7AA7D4 60%);
+          background: linear-gradient(to bottom, #F5A623 60%, #225599 60%);
           border: 1px solid white;
           border-radius: 2px;
         "
@@ -321,12 +322,12 @@ ui <- fluidPage(
           div(
         style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #F5A623 60%, #225599 60%);
+          background: linear-gradient(to bottom, #FFE680 60%, #7AA7D4 60%);
           border: 1px solid white;
           border-radius: 2px;
         "
           ),
-          "UE Average"
+          "EU Average"
         )
       ),
 
@@ -440,7 +441,7 @@ ui <- fluidPage(
     column(
       width = 12,
       h3("Total Inflation Over Time", style = "color:white; margin-left:5px; margin-top:-50px;"),
-      h5(textOutput("subtitleTotal"), style = "color:#dfefff; margin-left:5px; margin-top:-5px;"),
+      h5("Portugal vs EU average annual inflation (key events highlighted)", style = "color:white; margin-left:5px; margin-top:0px;"),
       div(
         style = "margin-left:15px; margin-bottom:10px; color:white; font-size:13px; display:flex; gap:25px; flex-wrap:wrap;",
 
@@ -450,7 +451,7 @@ ui <- fluidPage(
           div(
             style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #F5A623 60%);
+          background: linear-gradient(to bottom, #FFD700 60%);
           border: 1px solid white;
           border-radius: 2px;
         "
@@ -464,12 +465,12 @@ ui <- fluidPage(
           div(
             style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #E63946 60%);
+          background: linear-gradient(to bottom, #FF6F3C 60%);
           border: 1px solid white;
           border-radius: 2px;
         "
           ),
-          "UE Average"
+          "EU Average"
         )
       ),
       plotOutput("totalPlot", height = "350px", width = "100%")
@@ -480,8 +481,8 @@ ui <- fluidPage(
     style = "padding:0 18px; margin-top:10px;",
     column(
       width = 12,
-      h3("Ranking of Annual Percentage Change in Inflation by Country",
-         style = "color:white; margin-left:5px;"),
+      h3("Ranking of Annual Percentage Change in Inflation by Country", style = "color:white; margin-left:5px;"),
+      h5("Portugal’s position over time in the EU inflation ranking (from highest to lowest)", style = "color:white; margin-left:5px; margin-top:0px;"),
       div(
         style = "margin-left:5px; margin-bottom:10px; color:white; font-size:13px; display:flex; gap:25px; flex-wrap:wrap;",
 
@@ -574,11 +575,12 @@ server <- function(input, output) {
       paste(sapply(split_words, paste, collapse = " "), collapse = "\n")
     }) %>% unlist()
   }
+  
   # ===============================
   # Plot 1: Category-wise inflation
   # ===============================
   output$subtitleCategory <- renderText({
-    paste("How inflation varies by category: Portugal in comparison with the UE average in", input$year)
+    paste("How inflation varies by category: Portugal in comparison with the EU average in", input$year)
   })
 
   output$categoryPlot <- renderPlot(bg="#0C2947", {
@@ -602,10 +604,10 @@ server <- function(input, output) {
       scale_x_discrete(labels = category_labels)+
       scale_fill_manual(
         values = c(
-          "Portugal_Positive"   = "#FFE680",
-          "Portugal_Negative"   = "#7AA7D4",
-          "Europe_Avg_Positive" = "#F5A623",
-          "Europe_Avg_Negative" = "#225599"
+          "Portugal_Positive"   = "#F5A623",
+          "Portugal_Negative"   = "#225599",
+          "Europe_Avg_Positive" = "#FFE680",
+          "Europe_Avg_Negative" = "#7AA7D4"
 
         ),
         labels = c(
@@ -633,7 +635,7 @@ server <- function(input, output) {
   # Plot 2: Map
   # ===============================
   output$subtitleMap <- renderText({
-    paste("Mapping UE inflation: Where Portugal stands among the highest and lowest in", input$year)
+    paste("Mapping EU inflation: Where Portugal stands among the highest and lowest in", input$year)
   })
 
   output$mapPlot <- renderPlot(bg="#0C2947", {
@@ -781,9 +783,9 @@ server <- function(input, output) {
 
       # Labels for Portugal and EU average
       geom_point(aes(y = Portugal),
-                 shape = 21, fill = "#F5A623", color = "white", stroke = 1.5, size = 6) +
+                 shape = 21, fill = "#FFD700", color = "white", stroke = 1.5, size = 6) +
       geom_point(aes(y = Europe_Avg),
-                 shape = 21, fill = "#E63946", color = "white", stroke = 1.5, size = 6) +
+                 shape = 21, fill = "#FF6F3C", color = "white", stroke = 1.5, size = 6) +
 
       geom_text(aes(
         x = Year - 0.25,
