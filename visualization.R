@@ -1,8 +1,8 @@
 # ============================
 # Set working directory
 # ============================
-setwd("C:/Users/iaras/MECD/VisualizacaoDados/projeto")
-#setwd("//wsl.localhost/Ubuntu-20.04/home/mariana/GitHub/EuroBoom")
+#setwd("C:/Users/iaras/MECD/VisualizacaoDados/projeto")
+setwd("//wsl.localhost/Ubuntu-20.04/home/mariana/GitHub/EuroBoom")
 #setwd("/Users/luanalima/Documents/Mestrado/VPD/EuroBoom")
 
 # ============================
@@ -64,7 +64,6 @@ categories_dict <- c(
 data_categories <- data_categories %>%
   mutate(Category = recode(Category, !!!categories_dict))
 
-all_categories <- unique(data_categories$Category)
 # Compute EU average per year/category
 europe_avg <- data_categories %>%
   group_by(Year, Category) %>%
@@ -92,17 +91,19 @@ data_plot_categories <- data_plot_categories %>%
   mutate(
     Region = factor(Region, levels = c("Portugal", "Europe_Avg"))
   )
-# Keep main categories, group others as "Others"
+
+# Keep main categories
 selected_categories <- c(
   "Housing, Water, Electricity, Gas & Other Fuels",
-  "Alcoholic Beverages & Tobacco",
+  "Clothing & Footwear",
   "Food & Non-Alcoholic Beverages",
   "Health",
   "Transport"
 )
 
+# Convert the columns Portugal and Europe_Avg in Region and the values of the inflation comes in new column called Inflation
 data_plot_categories <- data_plot_categories %>%
-  filter(Category %in% selected_categories) %>%     # mantém só as categorias desejadas
+  filter(Category %in% selected_categories) %>%
   group_by(Year, Region, Category) %>%
   summarise(Inflation = sum(Inflation, na.rm = TRUE), .groups = "drop") %>%
   mutate(
@@ -110,15 +111,12 @@ data_plot_categories <- data_plot_categories %>%
     Region   = factor(Region, levels = c("Portugal", "Europe_Avg"))
   )
 
-
-# Convert the columns Portugal and Europe_Avg in Region and the values of the inflation comes in new column called Inflation
 # Create new column for the colors with 'mutate'
 data_plot_categories <- data_plot_categories %>%
   mutate(
     Sign       = ifelse(Inflation >= 0, "Positive", "Negative"),
     RegionSign = paste(Region, Sign, sep = "_")
   )
-
 
 # ============================
 #  MAP (Second visualization)
@@ -271,20 +269,20 @@ ui <- fluidPage(
   titlePanel(
     tags$div("Where Does Portugal Stand in UE Inflation Landscape? (2000-2024)", style = "color:white;margin-left:15px;")
   ),
-  
+
   # Explanation paragraph
   tags$p(
-    "The values shown represent the annual inflation rate compared to the previous year, measured using the Harmonized Index of Consumer Prices (HICP). 
-  This highlights the percentage change in prices by category and by country.", 
+    "The values shown represent the annual inflation rate compared to the previous year, measured using the Harmonized Index of Consumer Prices (HICP).
+  This highlights the percentage change in prices by category and by country.",
     style = "color:white; font-size:14px; margin-left:15px; margin-top:5px; margin-bottom:5px;"
   ),
   tags$p(
-    "An inflation rate around 2% is generally considered ideal. 
-  Rates below this, especially negative values, can signal economic slowdown as they may indicate delayed consumption and investment. 
+    "An inflation rate around 2% is generally considered ideal.
+  Rates below this, especially negative values, can signal economic slowdown as they may indicate delayed consumption and investment.
   Conversely, inflation significantly above 2% can also be problematic, as sharp increases in prices are difficult for households and businesses to adjust to in a short period.", 
     style = "color:white; font-size:14px; margin-left:15px; margin-top:5px; margin-bottom:5px;"
   ),
-  
+
   tags$p(
     "According to the ceteris paribus assumption, these figures show the pure effect of price changes, assuming all other factors remain unchanged. This allows for a clearer comparison of inflation trends across countries and categories.", 
     style = "color:white; font-size:13px; margin-left:15px; margin-top:0px; margin-bottom:15px; font-style:italic;"
@@ -316,14 +314,14 @@ ui <- fluidPage(
           ),
           "Portugal"
         ),
-       
+
         # EU Average
         div(
           style = "display:flex; align-items:center; gap:6px;",
           div(
         style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #F5A623 60%, #3A6EA5 60%);
+          background: linear-gradient(to bottom, #F5A623 60%, #225599 60%);
           border: 1px solid white;
           border-radius: 2px;
         "
@@ -370,7 +368,7 @@ ui <- fluidPage(
             div(style='width:14px; height:14px; border:2px solid #F5A623; background:transparent; margin-right:6px;'),
             "Min Inflation")
       ),
-     
+
       # Gradient for map fill
       div(
         style = "margin-left:15px; margin-bottom:5px;",
@@ -409,7 +407,7 @@ ui <- fluidPage(
         )
       )
     )
-  ), 
+  ),
   tags$style(HTML("
     .irs {
       width: 100% !important;
@@ -421,19 +419,19 @@ ui <- fluidPage(
     }
 
     .irs .irs-line, .irs .irs-bar, .irs .irs-bar-edge {
-      background: #3c72a6 !important; 
+      background: #3c72a6 !important;
       border-radius: 7px !important;
-    } 
+    }
 
     .irs .irs-from, .irs .irs-to, .irs .irs-single {
       background: #0044d0 !important;
       color: white !important;
       border: none;
     }
-    
+
     .irs-grid-pol {
-    background: white !important;
-}
+        background: white !important;
+    }
   ")),
 
   # Total inflation over time
@@ -445,7 +443,7 @@ ui <- fluidPage(
       h5(textOutput("subtitleTotal"), style = "color:#dfefff; margin-left:5px; margin-top:-5px;"),
       div(
         style = "margin-left:15px; margin-bottom:10px; color:white; font-size:13px; display:flex; gap:25px; flex-wrap:wrap;",
-        
+
         # Portugal
         div(
           style = "display:flex; align-items:center; gap:6px;",
@@ -459,7 +457,7 @@ ui <- fluidPage(
           ),
           "Portugal"
         ),
-        
+
         # EU Average
         div(
           style = "display:flex; align-items:center; gap:6px;",
@@ -486,7 +484,7 @@ ui <- fluidPage(
          style = "color:white; margin-left:5px;"),
       div(
         style = "margin-left:5px; margin-bottom:10px; color:white; font-size:13px; display:flex; gap:25px; flex-wrap:wrap;",
-        
+
         # Portugal
         div(
           style = "display:flex; align-items:center; gap:6px;",
@@ -500,7 +498,7 @@ ui <- fluidPage(
           ),
           "Portugal"
         ),
-        
+
         # Selected Countries
         div(
           style = "display:flex; align-items:center; gap:6px;",
@@ -518,7 +516,7 @@ ui <- fluidPage(
       plotOutput("rankPlot", height = "350px", width = "100%")
     )
   ),
-  
+
   fluidRow(
     style = "padding:5px 18px; margin-top:5px;",
     column(
@@ -529,35 +527,34 @@ ui <- fluidPage(
   ),
   # Footer
   tags$hr(style = "border-color: white; border-width: 1px; margin-top:30px;"),
-  
+
   tags$div(
     style = "
-    display:flex; 
-    justify-content: space-between; 
-    align-items:center; 
-    color:white; 
-    font-size:12px; 
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    color:white;
+    font-size:12px;
     padding:5px 18px;
   ",
-    
+
     # Date
     tags$div("Date: 17/11/2025"),
-    
+
     # Authors
     tags$div("Authors: Beatriz Silva, Luana Lima, Mariana Rocha"),
-    
+
     # Source with hyperlink text
     tags$div(
       "Source: ",
       tags$a(
         "PORDATA – Inflation by Goods & Services",
         href = "https://www.pordata.pt/pt/estatisticas/inflacao/taxa-de-inflacao/taxa-de-inflacao-por-bens-e-servicos-portugal-na-europa?_gl=1*uv1ndk*_up*MQ..*_ga*MTE4ODc2MDY2MC4xNzYyMjc0MDQx*_ga_HL9EXBCVBZ*czE3NjIyNzQwNDAkbzEkZzAkdDE3NjIyNzQwNDAkajYwJGwwJGgw",
-        target = "_blank", 
+        target = "_blank",
         style = "color:#FFD700; text-decoration:underline;"
       )
     )
   ),
-  
 
   br()
 )
@@ -586,7 +583,7 @@ server <- function(input, output) {
 
   output$categoryPlot <- renderPlot(bg="#0C2947", {
     df_year <- data_plot_categories %>% filter(Year == input$year)
-    
+
     category_labels <- label_lines(levels(df_year$Category), max_lines = 4)
     ggplot(df_year, aes(x = Category, y = Inflation, fill = RegionSign)) +
       geom_col(position = position_dodge(width = 0.9), width = 0.8) +
@@ -600,7 +597,7 @@ server <- function(input, output) {
       ) +
       labs(
         y = "Inflation (%)",
-        x = "Categories" 
+        x = "Categories"
       ) +
       scale_x_discrete(labels = category_labels)+
       scale_fill_manual(
@@ -608,8 +605,8 @@ server <- function(input, output) {
           "Portugal_Positive"   = "#FFE680",
           "Portugal_Negative"   = "#7AA7D4",
           "Europe_Avg_Positive" = "#F5A623",
-          "Europe_Avg_Negative" = "#225599" 
-          
+          "Europe_Avg_Negative" = "#225599"
+
         ),
         labels = c(
           "Portugal_Positive"   = "Portugal (Positive)",
@@ -703,7 +700,7 @@ server <- function(input, output) {
       scale_fill_gradient2(
         low      = "#3A6EA5",
         mid      = "#C7DDF1",
-        high     = "#F5A623", 
+        high     = "#F5A623",
         midpoint = 0,
         name     = "Inflation (%)",
         na.value = "#223B5A"
@@ -788,7 +785,6 @@ server <- function(input, output) {
       geom_point(aes(y = Europe_Avg),
                  shape = 21, fill = "#E63946", color = "white", stroke = 1.5, size = 6) +
 
-      # Rótulos
       geom_text(aes(
         x = Year - 0.25,
         y = Portugal + offset_pt,
@@ -864,7 +860,6 @@ server <- function(input, output) {
     })
   })
 
-
   output$rankPlot <- renderPlot(bg = "#0C2947", {
 
     sel_countries <- selected_countries()
@@ -875,7 +870,7 @@ server <- function(input, output) {
 
     # Side labels with Portugal highlighted
     make_labels <- function(d, y, sel) {
-      
+
       df <- d %>%
         filter(Year == y) %>%
         group_by(Rank) %>%
@@ -885,28 +880,28 @@ server <- function(input, output) {
           others_raw = paste(setdiff(sort(unique(Country)), "Portugal"), collapse = ", "),
           .groups = "drop"
         )
-      
+
       df$label_html <- df$others_raw
-      
+
       df$label_html[df$has_pt] <- paste0(
         "<span style='color:#FFD700;font-weight:700'>Portugal</span>",
         ifelse(df$others_raw[df$has_pt] != "",
                paste0(", ", df$others_raw[df$has_pt]), "")
       )
-      
+
       for (ct in sel) {
         if (ct == "Portugal") next
-        
+
         df$label_html <- gsub(
           paste0("\\b", ct, "\\b"),
           sprintf("<span style='color:#FF6F3C;font-weight:700'>%s</span>", ct),
           df$label_html
         )
       }
-      
+
       df
     }
-    
+
     side_labels <- bind_rows(
       make_labels(data_rank, first_year, sel_countries) %>% mutate(side = "left"),
       make_labels(data_rank, last_year, sel_countries)  %>% mutate(side = "right")
@@ -915,7 +910,6 @@ server <- function(input, output) {
         x = if_else(side == "left", first_year, last_year),
         hjust = if_else(side == "left", 1.05, 0.00)
       )
-
 
     ggplot(data_rank, aes(x = Year, y = Rank, group = Country)) +
       geom_segment(
