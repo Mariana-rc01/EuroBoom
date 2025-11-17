@@ -451,7 +451,7 @@ ui <- fluidPage(
           div(
             style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #FFD700 60%);
+          background: linear-gradient(to bottom, #FF9F1C 60%);
           border: 1px solid white;
           border-radius: 2px;
         "
@@ -465,7 +465,7 @@ ui <- fluidPage(
           div(
             style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #FF6F3C 60%);
+          background: linear-gradient(to bottom, #D7263D 60%);
           border: 1px solid white;
           border-radius: 2px;
         "
@@ -477,6 +477,7 @@ ui <- fluidPage(
     )
   ),
 
+  # Raking of Annual Change
   fluidRow(
     style = "padding:0 18px; margin-top:10px;",
     column(
@@ -492,7 +493,7 @@ ui <- fluidPage(
           div(
             style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #FFD700);
+          background: linear-gradient(to bottom, #FF9F1C);
           border: 1px solid white;
           border-radius: 2px;
         "
@@ -506,7 +507,7 @@ ui <- fluidPage(
           div(
             style = "
           width:14px; height:14px;
-          background: linear-gradient(to bottom, #FF6F3C);
+          background: linear-gradient(to bottom, #D7263D);
           border: 1px solid white;
           border-radius: 2px;
         "
@@ -734,7 +735,7 @@ server <- function(input, output) {
     df_years <- data_total_plot
 
     anos <- 2000:2024
-    labels_anos <- c("2000", paste0(substr(anos[-1], 3, 4), "'"))
+    labels_anos <- c("2000", paste0("'", substr(anos[-1], 3, 4)))
 
     df_wide <- df_years |>
       tidyr::pivot_wider(names_from = Region, values_from = Inflation) |>
@@ -783,9 +784,9 @@ server <- function(input, output) {
 
       # Labels for Portugal and EU average
       geom_point(aes(y = Portugal),
-                 shape = 21, fill = "#FFD700", color = "white", stroke = 1.5, size = 6) +
+                 shape = 21, fill = "#FF9F1C", color = "white", stroke = 1.5, size = 6) +
       geom_point(aes(y = Europe_Avg),
-                 shape = 21, fill = "#FF6F3C", color = "white", stroke = 1.5, size = 6) +
+                 shape = 21, fill = "#D7263D", color = "white", stroke = 1.5, size = 6) +
 
       geom_text(aes(
         x = Year - 0.25,
@@ -836,7 +837,7 @@ server <- function(input, output) {
           inputId = paste0("btn_", gsub(" ", "_", cntry)),
           label = cntry,
           style = paste0(
-            "background-color:", ifelse(cntry %in% sel, "#FF6F3C", "#1F3B5A"), ";",
+            "background-color:", ifelse(cntry %in% sel, "#D7263D", "#1F3B5A"), ";",
             "color:", ifelse(cntry %in% sel, "white", "white"), ";",
             "border:none; border-radius:20px;",
             "padding:6px 14px; font-size:13px; font-weight:600;",
@@ -865,6 +866,8 @@ server <- function(input, output) {
   output$rankPlot <- renderPlot(bg = "#0C2947", {
 
     sel_countries <- selected_countries()
+    anos <- 2000:2024
+    labels_anos <- c("2000", paste0("'", substr(anos[-1], 3, 4)))
 
     first_year  <- min(data_rank$Year, na.rm = TRUE)
     last_year   <- max(data_rank$Year, na.rm = TRUE)
@@ -886,7 +889,7 @@ server <- function(input, output) {
       df$label_html <- df$others_raw
 
       df$label_html[df$has_pt] <- paste0(
-        "<span style='color:#FFD700;font-weight:700'>Portugal</span>",
+        "<span style='color:#FF9F1C;font-weight:700'>Portugal</span>",
         ifelse(df$others_raw[df$has_pt] != "",
                paste0(", ", df$others_raw[df$has_pt]), "")
       )
@@ -896,7 +899,7 @@ server <- function(input, output) {
 
         df$label_html <- gsub(
           paste0("\\b", ct, "\\b"),
-          sprintf("<span style='color:#FF6F3C;font-weight:700'>%s</span>", ct),
+          sprintf("<span style='color:#F27286;font-weight:700'>%s</span>", ct),
           df$label_html
         )
       }
@@ -927,13 +930,13 @@ server <- function(input, output) {
 
       # Highlight Selected Countries
       geom_line(data = subset(data_rank, Country %in% sel_countries & Country != "Portugal"),
-                color = "#FF6F3C", linewidth = 1.6) +
+                color = "#D7263D", linewidth = 1.6) +
       geom_point(data = subset(data_rank, Country %in% sel_countries & Country != "Portugal"),
-                 color = "#FF6F3C", size = 2.2) +
+                 color = "#D7263D", size = 2.2) +
 
       # Highlight Portugal
-      geom_line(data = subset(data_rank, Country == "Portugal"), color = "#FFD700", linewidth = 1.6) +
-      geom_point(data = subset(data_rank, Country == "Portugal"), color = "#FFD700", size = 2.2) +
+      geom_line(data = subset(data_rank, Country == "Portugal"), color = "#FF9F1C", linewidth = 1.6) +
+      geom_point(data = subset(data_rank, Country == "Portugal"), color = "#FF9F1C", size = 2.2) +
 
       geom_richtext(
         data = side_labels,
@@ -943,9 +946,11 @@ server <- function(input, output) {
         inherit.aes = FALSE) +
 
       scale_y_reverse(breaks = 1:n_countries, expand = expansion(mult = c(0.02, 0.10))) +
-      scale_x_continuous(limits = c(first_year, last_year),
-                         breaks = seq(first_year, last_year, by = 4),
-                         expand = expansion(mult = c(0, 0))) +
+      scale_x_continuous(
+        breaks = anos,
+        labels = labels_anos,
+        expand = expansion(mult = 0.03)
+      ) +
       coord_cartesian(clip = "off") +
       labs(x = NULL, y = NULL) +
       theme_minimal(base_size = 12) +
